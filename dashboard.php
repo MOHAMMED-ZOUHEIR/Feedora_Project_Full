@@ -2420,20 +2420,20 @@ echo '</div>'; // End posts-feed
         
         <div class="comments-body" id="commentsBody">
             <!-- Comments will be loaded here -->
-        </div>
-        
-        <div class="comment-form">
-            <div class="comment-input-container">
-                <img src="<?php echo htmlspecialchars($profileImage); ?>" alt="Your avatar" class="comment-avatar">
-                <textarea id="commentInput" class="comment-input" placeholder="Write a comment..." rows="1"></textarea>
-                <button id="commentSubmit" class="comment-submit">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
+            <div class="comment-form">
+                <div class="comment-input-container">
+                    <img src="<?php echo htmlspecialchars($profileImage); ?>" alt="Your avatar" class="comment-avatar">
+                    <textarea id="commentInput" class="comment-input" placeholder="Write a comment..." rows="1"></textarea>
+                    <button id="commentSubmit" class="comment-submit">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
+        
     </div>
 </div>
 

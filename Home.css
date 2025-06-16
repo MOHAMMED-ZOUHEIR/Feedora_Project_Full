@@ -2321,7 +2321,16 @@ body {
     /* Ensure the icon maintains its position regardless of parent scaling */
     transform-origin: center center;
   }
-  
+     
+
+  @media screen and (max-width: 844px) {
+    
+    .title-icon {
+      position: relative;
+      left: 74% !important;
+    }
+
+  }
   /* Hero Section Mobile Responsive */
   @media (max-width: 768px) {
     .hero-container {

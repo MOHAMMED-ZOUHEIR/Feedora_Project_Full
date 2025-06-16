@@ -528,7 +528,6 @@ foreach ($posts as &$post) {
         }
 
         .post-card-media {
-            aspect-ratio: 16/9;
             overflow: hidden;
             border-radius: var(--radius-md) var(--radius-md) 0 0;
             position: relative;

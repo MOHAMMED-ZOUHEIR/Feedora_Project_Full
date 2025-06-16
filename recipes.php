@@ -1,6 +1,8 @@
 <?php
 // Include the database connection script
 require_once 'config/config.php';
+// Include FIXED notification utilities
+require_once 'notification_utils.php';
 // Start the session to manage user data
 session_start();
 

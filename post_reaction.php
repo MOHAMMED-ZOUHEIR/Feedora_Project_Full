@@ -11,6 +11,8 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+
+
 // Set content type to JSON
 header('Content-Type: application/json');
 

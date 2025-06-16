@@ -291,8 +291,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </svg>
       </a>
       <a href="recipes.php" class="nav-link">Recipes</a>
-      <a href="live-sessions.php" class="nav-link">Live Sessions</a>
-      <a href="community.php" class="nav-link">Community</a>
+      <a href="live.php" class="nav-link">Live Sessions</a>
+      <a href="dashboard.php" class="nav-link">Community</a>
 
       <div class="search-container">
         <input type="text" placeholder="Search" class="search-input">
@@ -341,10 +341,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           </button>
         </div>
         <nav class="mobile-nav-links">
-          <a href="/" class="mobile-nav-link">Home</a>
-          <a href="/recipes" class="mobile-nav-link">Recipes</a>
-          <a href="/live-sessions" class="mobile-nav-link">Live Sessions</a>
-          <a href="/community" class="mobile-nav-link">Community</a>
+          <a href="home.php" class="mobile-nav-link">Home</a>
+          <a href="recipes.php" class="mobile-nav-link">Recipes</a>
+          <a href="live.php" class="mobile-nav-link">Live Sessions</a>
+          <a href="dashboard.php" class="mobile-nav-link">Community</a>
         </nav>
         <div class="mobile-auth-buttons">
           <a href="sign-up.php" class="mobile-signup-button">Sign up</a>

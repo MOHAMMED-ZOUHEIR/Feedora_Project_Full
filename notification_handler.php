@@ -65,18 +65,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     }
     
-    // Get all notifications
+    // FIXED: Get all notifications with correct column aliases
     if ($_POST['action'] === 'get_all_notifications') {
         try {
             $page = isset($_POST['page']) ? intval($_POST['page']) : 1;
             $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 10;
             $offset = ($page - 1) * $limit;
             
-            // Get notifications with pagination
+            // FIXED: Use correct aliases that match header.php expectations
             $stmt = $pdo->prepare(
-                "SELECT n.*, u.NAME, u.PROFILE_IMAGE 
+                "SELECT 
+                    n.NOTIFICATION_ID,
+                    n.USER_ID,
+                    n.TARGET_USER_ID,
+                    n.NOTIFICATION_TYPE,
+                    n.CONTENT,
+                    n.RELATED_ID,
+                    n.IS_READ,
+                    n.CREATED_AT,
+                    u.NAME as SENDER_NAME,
+                    u.PROFILE_IMAGE as SENDER_IMAGE,
+                    u.USER_ID as SENDER_USER_ID
                 FROM NOTIFICATIONS n 
-                JOIN USERS u ON n.USER_ID = u.USER_ID 
+                LEFT JOIN USERS u ON n.USER_ID = u.USER_ID 
                 WHERE n.TARGET_USER_ID = ? 
                 ORDER BY n.CREATED_AT DESC 
                 LIMIT ? OFFSET ?"

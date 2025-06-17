@@ -20,17 +20,26 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // ENHANCED: Current user information with validation
-$userId = $_SESSION['user_id'];
-$userName = 'User';
-$profileImage = 'images/default-profile.png';
+$userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+$userName = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'User';
+$profileImage = isset($_SESSION['profile_image']) ? $_SESSION['profile_image'] : 'images/default-profile.png';
 $notificationCount = 0;
 $notifications = [];
 
 try {
+    if (!$userId) {
+        throw new Exception("User ID not found in session");
+    }
+
     // ENHANCED: Get current user data from database (always fresh data)
     $userStmt = $pdo->prepare("SELECT USER_ID, NAME, EMAIL, PROFILE_IMAGE FROM USERS WHERE USER_ID = ?");
     $userStmt->execute([$userId]);
     $currentUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($currentUser && $currentUser['NAME']) {
+        $userName = $currentUser['NAME'];
+        $_SESSION['user_name'] = $userName;
+    }
 
     if (!$currentUser) {
         // User doesn't exist anymore, logout
@@ -206,107 +215,114 @@ error_log("🔍 Header loaded for user: {$userName} (ID: {$userId}) with {$notif
     }
 
     /* Header Styles */
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    background-color: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    position: relative;
-    z-index: 90;
-    height: 70px;
-    width: 100%;
-    box-sizing: border-box;
-    overflow: visible; /* Changed from hidden to prevent clipping */
-}
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        background-color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 90;
+        height: 70px;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: visible;
+        /* Changed from hidden to prevent clipping */
+    }
 
-.header-logo img {
-    height: 36px;
-    max-width: 140px;
-    object-fit: contain;
-}
-
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    flex-wrap: nowrap;
-    height: 100%;
-    padding: 0 5px;
-    min-width: 0; /* Allow shrinking */
-    flex-shrink: 1; /* Allow the container to shrink */
-}
-
-.header-action-item {
-    position: relative;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 40px;
-    transition: transform var(--transition-speed);
-    flex-shrink: 0; /* Prevent individual items from shrinking */
-}
-
-.header-action-item:hover {
-    transform: translateY(-2px);
-}
-
-       /* Search Container */
-.search-container {
-    display: flex;
-    align-items: center;
-    background-color: var(--light-background);
-    border: 1px solid var(--border-color);
-    border-radius: 24px;
-    height: 40px;
-    width: 240px;
-    transition: all var(--transition-speed) ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.search-container:focus-within {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(237, 90, 44, 0.1);
-    background-color: white;
-}
-
- .search-input {
-    border: none;
-    background-color: transparent;
-    padding: 8px 12px;
-    width: 100%;
-    outline: none;
-    font-size: 14px;
-    color: var(--text-color);
-    min-width: 0; /* Allow input to shrink */
-}
-.search-input::placeholder {
-    color: var(--light-text);
-    opacity: 0.8;
-}
-
-.search-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--light-text);
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s ease;
-    flex-shrink: 0;
-}
+    .header-logo img {
+        height: 36px;
+        max-width: 140px;
+        object-fit: contain;
+    }
 
 
-        .search-button:hover {
-            color: var(--primary-color);
-        }
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: nowrap;
+        height: 100%;
+        padding: 0 5px;
+        min-width: 0;
+        /* Allow shrinking */
+        flex-shrink: 1;
+        /* Allow the container to shrink */
+    }
+
+    .header-action-item {
+        position: relative;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 40px;
+        transition: transform var(--transition-speed);
+        flex-shrink: 0;
+        /* Prevent individual items from shrinking */
+    }
+
+    .header-action-item:hover {
+        transform: translateY(-2px);
+    }
+
+    /* Search Container */
+    .search-container {
+        display: flex;
+        align-items: center;
+        background-color: var(--light-background);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        height: 40px;
+        width: 240px;
+        transition: all var(--transition-speed) ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .search-container:focus-within {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(237, 90, 44, 0.1);
+        background-color: white;
+    }
+
+    .search-input {
+        border: none;
+        background-color: transparent;
+        padding: 8px 12px;
+        width: 100%;
+        outline: none;
+        font-size: 14px;
+        color: var(--text-color);
+        min-width: 0;
+        /* Allow input to shrink */
+    }
+
+    .search-input::placeholder {
+        color: var(--light-text);
+        opacity: 0.8;
+    }
+
+    .search-button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--light-text);
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s ease;
+        flex-shrink: 0;
+    }
+
+
+    .search-button:hover {
+        color: var(--primary-color);
+    }
+
     /* FIXED: Enhanced Notification Styles with Error Handling */
     .notification-icon,
     .settings-icon {
@@ -684,221 +700,234 @@ error_log("🔍 Header loaded for user: {$userName} (ID: {$userId}) with {$notif
 
     /* Mobile Responsive */
     @media (max-width: 768px) {
-    .dashboard-header {
-        padding: 10px 15px;
-        height: 60px;
-        background-color: white;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-        position: relative;
-        overflow: visible;
-    }
+        .dashboard-header {
+            padding: 10px 15px;
+            height: 60px;
+            background-color: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: visible;
+        }
 
-    .hamburger-menu {
-        display: flex;
-        margin-right: 10px;
-        order: -1; /* Ensure hamburger appears first */
-    }
-.notification-dropdown {
-        width: calc(100vw - 30px) !important;
-        right: -120px !important;
-        /* max-height: 400px; */
-    }
+        .hamburger-menu {
+            display: flex;
+            margin-right: 10px;
+            order: -1;
+            /* Ensure hamburger appears first */
+        }
+
+        .notification-dropdown {
+            width: calc(100vw - 30px) !important;
+            right: -120px !important;
+            /* max-height: 400px; */
+        }
+
         .header-logo {
             display: none;
         }
-            /* FIXED: Better responsive header actions */
-    .header-actions {
-        gap: 8px; /* Reduced gap on mobile */
-        flex: 1;
-        justify-content: flex-end;
-        min-width: 0;
-        position: relative;
+
+        /* FIXED: Better responsive header actions */
+        .header-actions {
+            gap: 8px;
+            /* Reduced gap on mobile */
+            flex: 1;
+            justify-content: flex-end;
+            min-width: 0;
+            position: relative;
+        }
+
+        .search-container {
+            width: 40px;
+            overflow: hidden;
+            transition: width 0.3s ease;
+            position: absolute;
+            right: 180px;
+            /* Position it to not overlap other items */
+            z-index: 10;
+        }
+
+        .search-container.expanded {
+            width: 200px;
+            /* Increased width when expanded */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            background-color: white;
+            border-color: var(--primary-color);
+        }
+
+        .search-container .search-input {
+            opacity: 0;
+            width: 0;
+            padding: 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .search-container.expanded .search-input {
+            opacity: 1;
+            width: 100%;
+            padding: 8px 12px;
+        }
+
+        /* FIXED: Ensure other header items maintain their position */
+        .notification-icon,
+        .settings-icon,
+        .user-profile {
+            position: relative;
+            z-index: 5;
+        }
+
+        .main-content {
+            margin-left: 0 !important;
+            width: 100% !important;
+            transition: all 0.3s ease;
+        }
+
+        body.sidebar-active .main-content {
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .user-info {
+            display: none;
+        }
+
+        .settings-icon {
+            display: none;
+        }
+
+        .notification-dropdown {
+            width: calc(100vw - 30px);
+            right: -120px;
+            max-height: 400px;
+        }
+
+        .notification-item {
+            padding: 12px 16px;
+        }
+
+        .notification-user-image img {
+            width: 40px;
+            height: 40px;
+        }
     }
 
-    .search-container {
-        width: 40px;
-        overflow: hidden;
-        transition: width 0.3s ease;
-        position: absolute;
-        right: 180px; /* Position it to not overlap other items */
-        z-index: 10;
+    @media (max-width: 576px) {
+        .dashboard-header {
+            padding: 8px 12px;
+            height: 55px;
+        }
+
+        /* FIXED: Even better mobile layout for small screens */
+        .header-actions {
+            gap: 6px;
+        }
+
+        .search-container {
+            right: 120px;
+            /* Adjust position for smaller screens */
+        }
+
+        .search-container.expanded {
+            width: 180px;
+            /* Slightly smaller on very small screens */
+        }
+
+        .notification-dropdown {
+            width: calc(100vw - 20px);
+            right: -150px;
+        }
+
+        .profile-dropdown {
+            width: 180px;
+            right: 0;
+        }
+
+        .user-profile-image img {
+            width: 32px;
+            height: 32px;
+        }
     }
 
-   .search-container.expanded {
-        width: 200px; /* Increased width when expanded */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        background-color: white;
-        border-color: var(--primary-color);
+    /* FIXED: Additional mobile search improvements */
+    @media (max-width: 480px) {
+        .search-container {
+            right: 100px;
+        }
+
+        .search-container.expanded {
+            width: 160px;
+            right: 80px;
+        }
     }
 
-    .search-container .search-input {
-        opacity: 0;
-        width: 0;
-        padding: 8px 0;
-        transition: all 0.3s ease;
+    /* Loading Animation */
+    .loading-notification {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        color: var(--light-text);
     }
 
-    .search-container.expanded .search-input {
-        opacity: 1;
+    .loading-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* FIXED: Ensure search doesn't interfere with other elements */
+    .search-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100%;
-        padding: 8px 12px;
-    }
-
-    /* FIXED: Ensure other header items maintain their position */
-    .notification-icon,
-    .settings-icon,
-    .user-profile {
-        position: relative;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.1);
         z-index: 5;
-    }
-
-    .main-content {
-        margin-left: 0 !important;
-        width: 100% !important;
-        transition: all 0.3s ease;
-    }
-
-    body.sidebar-active .main-content {
-        opacity: 0.8;
-        pointer-events: none;
-    }
-
-    .user-info {
         display: none;
     }
 
-    .settings-icon {
-        display: none;
-    }
-
-    .notification-dropdown {
-        width: calc(100vw - 30px);
-        right: -120px;
-        max-height: 400px;
-    }
-
-    .notification-item {
-        padding: 12px 16px;
-    }
-
-    .notification-user-image img {
-        width: 40px;
-        height: 40px;
-    }
-}
-
-@media (max-width: 576px) {
-    .dashboard-header {
-        padding: 8px 12px;
-        height: 55px;
-    }
-
-    /* FIXED: Even better mobile layout for small screens */
-    .header-actions {
-        gap: 6px;
-    }
-
-    .search-container {
-        right: 120px; /* Adjust position for smaller screens */
-    }
-
-    .search-container.expanded {
-        width: 180px; /* Slightly smaller on very small screens */
-    }
-
-    .notification-dropdown {
-        width: calc(100vw - 20px);
-        right: -150px;
-    }
-
-    .profile-dropdown {
-        width: 180px;
-        right: 0;
-    }
-
-    .user-profile-image img {
-        width: 32px;
-        height: 32px;
-    }
-}
-
-/* FIXED: Additional mobile search improvements */
-@media (max-width: 480px) {
-    .search-container {
-        right: 100px;
-    }
-    
-    .search-container.expanded {
-        width: 160px;
-        right: 80px;
-    }
-}
-
-/* Loading Animation */
-.loading-notification {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-    color: var(--light-text);
-}
-
-.loading-spinner {
-    width: 20px;
-    height: 20px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-right: 10px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* FIXED: Ensure search doesn't interfere with other elements */
-.search-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.1);
-    z-index: 5;
-    display: none;
-}
-
-.search-overlay.active {
-    display: block;
-}
-
-/* FIXED: Better header overflow handling */
-.dashboard-header::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 20px;
-    height: 100%;
-    background: linear-gradient(to right, transparent, white);
-    pointer-events: none;
-    z-index: 1;
-    display: none;
-}
-
-@media (max-width: 768px) {
-    .dashboard-header::after {
+    .search-overlay.active {
         display: block;
     }
-}
 
-.search-button svg {
-    position: absolute;
-    left: 20px;
-}
+    /* FIXED: Better header overflow handling */
+    .dashboard-header::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 20px;
+        height: 100%;
+        background: linear-gradient(to right, transparent, white);
+        pointer-events: none;
+        z-index: 1;
+        display: none;
+    }
 
+    @media (max-width: 768px) {
+        .dashboard-header::after {
+            display: block;
+        }
+    }
+
+    .search-button svg {
+        position: absolute;
+        left: 20px;
+    }
 </style>
 
 <!-- Header -->
@@ -914,7 +943,7 @@ error_log("🔍 Header loaded for user: {$userName} (ID: {$userId}) with {$notif
         <img src="images/Muslim Woman Cooking Illustration_Muslim Woman Cooking Illustration-01.svg" alt="Feedora Icon">
     </div>
 
-    
+
     <!-- Header Actions -->
     <div class="header-actions">
         <!-- Search -->
@@ -956,9 +985,10 @@ error_log("🔍 Header loaded for user: {$userName} (ID: {$userId}) with {$notif
                                 continue;
                             }
 
-                            $userImage = !empty($notification['PROFILE_IMAGE']) ? $notification['PROFILE_IMAGE'] : 'images/default-profile.png';
-                            $userName = !empty($notification['NAME']) ? $notification['NAME'] : 'Unknown User';
-                            $isRead = !empty($notification['IS_READ']) ? 'read' : 'unread';
+                           $userImage = !empty($notification['SENDER_IMAGE']) ? $notification['SENDER_IMAGE'] : 'images/default-profile.png';
+$userName = $notification['SENDER_NAME'] ?? 'Unknown User';
+
+                            $isRead = ($notification['IS_READ'] ?? 0) ? 'read' : 'unread';
                             $linkUrl = getNotificationLink($notification);
                             $content = !empty($notification['CONTENT']) ? $notification['CONTENT'] : 'New notification';
                             $createdAt = !empty($notification['CREATED_AT']) ? $notification['CREATED_AT'] : date('Y-m-d H:i:s');
@@ -1007,11 +1037,11 @@ error_log("🔍 Header loaded for user: {$userName} (ID: {$userId}) with {$notif
         <!-- User Profile -->
         <div class="user-profile" id="user-profile">
             <div class="user-info">
-                <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
+                <span class="user-name"><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'User'); ?></span>
                 <span class="user-role">Member</span>
             </div>
             <div class="user-profile-image">
-                <img src="<?php echo htmlspecialchars($profileImage); ?>"
+                <img src="<?php echo htmlspecialchars($_SESSION['profile_image'] ?? 'images/default-profile.png'); ?>"
                     alt="User Profile"
                     onerror="this.src='images/default-profile.png'">
             </div>
@@ -1504,8 +1534,10 @@ error_log("🔍 Header loaded for user: {$userName} (ID: {$userId}) with {$notif
             notifications.forEach(notification => {
                 if (!notification || !notification.NOTIFICATION_ID) return;
 
-                const userImage = notification.PROFILE_IMAGE || 'images/default-profile.png';
-                const userName = notification.NAME || 'Unknown User';
+const userImage = notification.SENDER_IMAGE || 'images/default-profile.png';
+const userName = notification.SENDER_NAME || 'Unknown User';
+
+
                 const isRead = notification.IS_READ ? 'read' : 'unread';
                 const content = notification.CONTENT || 'New notification';
 

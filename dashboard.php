@@ -752,7 +752,6 @@ if (!$profileImage) {
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
         }
 
 
@@ -847,6 +846,13 @@ if (!$profileImage) {
             width: 100%;
             border: 1px solid #eaeaea;
             position: relative !important;
+        }
+
+        .post-card:hover {
+            position: relative !important;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important; /* Keep original shadow */
+
+            /* Keep original shadow */
         }
 
         .post-header {
@@ -974,17 +980,19 @@ if (!$profileImage) {
         .post-card .post-image,
         .post-image {
             width: 100% !important;
-            max-height: 500px !important;
+            max-height: none !important;
+            /* Remove max-height constraint */
             overflow: hidden !important;
-            /* Keep overflow hidden only on image containers */
             display: flex !important;
             justify-content: center !important;
-            align-items: center !important;
+            align-items: flex-start !important;
+            /* Align to top instead of center */
             background-color: #fff !important;
             position: relative !important;
             cursor: pointer !important;
             border-radius: 0 !important;
             isolation: isolate !important;
+            /* Remove any fixed aspect ratio */
         }
 
         .posts-feed .post-image-content,
@@ -992,72 +1000,54 @@ if (!$profileImage) {
         .post-image-content {
             width: 100% !important;
             height: auto !important;
+            /* Let it maintain natural aspect ratio */
+            max-width: 100% !important;
+            max-height: 100% !important;
             object-fit: cover !important;
             display: block !important;
             cursor: pointer !important;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+            /* REMOVED: All hover transitions and transforms */
+            transition: none !important;
             position: relative !important;
             z-index: 1 !important;
-            max-width: 100% !important;
-            max-height: 100% !important;
         }
 
 
         .post-image::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg,
-                    rgba(237, 90, 44, 0.1) 0%,
-                    rgba(237, 90, 44, 0.05) 50%,
-                    transparent 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 2;
-            pointer-events: none;
-        }
-
-        .post-image:hover::before {
-            opacity: 1;
+            display: none !important;
+            /* Remove overlay gradient */
         }
 
         .post-image::after {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            font-size: 24px;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: all 0.3s ease;
-            z-index: 3;
-            pointer-events: none;
+            display: none !important;
+            /* Remove hover icon */
         }
 
+        .post-image:hover::before,
+        .post-image:hover::after {
+            display: none !important;
+        }
 
 
         .post-image video {
-            aspect-ratio: 4/5;
-            height: auto;
-            object-fit: cover;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 0;
+            width: 100% !important;
+            height: auto !important;
+            /* Let video maintain natural aspect ratio */
+            max-width: 100% !important;
+            object-fit: contain !important;
+            /* Changed from cover to contain */
+            cursor: pointer !important;
+            transition: none !important;
+            /* Remove all transitions */
+            border-radius: 0 !important;
+            display: block !important;
         }
 
         .post-image:hover video {
-            transform: none;
-            filter: brightness(1.05) contrast(1.05);
+            transform: none !important;
+            /* Remove hover transform */
+            filter: none !important;
+            /* Remove hover filter */
         }
 
         .post-description {
@@ -1491,7 +1481,7 @@ if (!$profileImage) {
             transition: transform 0.3s ease;
         }
 
- 
+
         .image-close-btn {
             position: absolute;
             top: -50px;
@@ -1647,7 +1637,7 @@ if (!$profileImage) {
             .food-reactions {
                 min-width: 300px !important;
                 padding: 10px 12px !important;
-                bottom: 70px !important;
+                bottom: 100px !important;
                 border-radius: 30px !important;
             }
 
@@ -3372,7 +3362,7 @@ if (!$profileImage) {
 
                 usersList.innerHTML = html;
 
-                
+
 
                 console.log('✅ Post reaction users displayed successfully');
             }
@@ -4025,7 +4015,7 @@ if (!$profileImage) {
                 });
                 usersList.innerHTML = usersHTML;
 
-   
+
             }
 
             if (modal) {

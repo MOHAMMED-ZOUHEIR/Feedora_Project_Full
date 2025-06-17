@@ -1,266 +1,759 @@
-<?php
-// TESTING SCRIPT: test_notifications.php
-// Use this to test the story notification system
+ function createCommentsModal() { const modalHTML = ` <div id="commentsModal" class="comments-modal"> <div class="comments-modal-content"> <div class="comments-header"> <h3>Comments</h3> <button class="close-comments" type="button">×</button> </div>
 
-require_once 'config/config.php';
-require_once 'notification_utils.php';
+            <div class="comments-body" id="commentsBody">
+                <!-- Comments will be loaded here dynamically -->
+            </div>
 
-// ONLY RUN THIS ON DEVELOPMENT/TESTING ENVIRONMENT
-if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
-    
-    echo "<h2>🧪 Story Notification System Test</h2>";
-    echo "<p>Testing the notification system for story uploads...</p>";
+            <div class="comment-form">
+                <div class="comment-input-container">
+                    <img src="${document.querySelector('.profile-avatar img')?.src || 'images/default-profile.png'}" alt="Your avatar" class="comment-avatar">
+                    <textarea
+                        id="commentInput"
+                        class="comment-input"
+                        placeholder="Write a comment..."
+                        rows="1"
+                        maxlength="500"></textarea>
+                    <button
+                        id="commentSubmit"
+                        class="comment-submit"
+                        type="button"
+                        disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
 
-    try {
-        // Test parameters
-        $testUserId = 1; // User who posts the story
-        $testStoryId = 1; // Story ID (use an existing one)
-        
-        echo "<div style='background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>📋 Test Configuration:</h3>";
-        echo "<ul>";
-        echo "<li><strong>Story Poster User ID:</strong> $testUserId</li>";
-        echo "<li><strong>Test Story ID:</strong> $testStoryId</li>";
-        echo "</ul>";
-        echo "</div>";
+document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
 
-        // Step 1: Check if user exists
-        $userStmt = $pdo->prepare("SELECT USER_ID, NAME, EMAIL FROM USERS WHERE USER_ID = ?");
-        $userStmt->execute([$testUserId]);
-        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$user) {
-            echo "<div style='background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-            echo "❌ <strong>Error:</strong> User ID $testUserId not found in database!";
-            echo "</div>";
-            exit();
-        }
+// Function to open comments modal
+window.openCommentsModal = function(postId) {
+console.log('📖 Opening comments modal for post:', postId);
 
-        echo "<div style='background: #e8f5e8; color: #2e7d32; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "✅ <strong>User Found:</strong> " . htmlspecialchars($user['NAME']) . " (" . htmlspecialchars($user['EMAIL']) . ")";
-        echo "</div>";
+currentPostId = postId;
+currentOffset = 0;
+hasMoreComments = false;
+totalCommentsCount = 0;
 
-        // Step 2: Check followers
-        $followersStmt = $pdo->prepare("
-            SELECT f.FOLLOWER_ID, u.NAME, u.EMAIL 
-            FROM FOLLOWERS f 
-            JOIN USERS u ON f.FOLLOWER_ID = u.USER_ID 
-            WHERE f.USER_ID = ?
-        ");
-        $followersStmt->execute([$testUserId]);
-        $followers = $followersStmt->fetchAll(PDO::FETCH_ASSOC);
+const modal = document.getElementById('commentsModal');
+const commentsBody = document.getElementById('commentsBody');
+const commentInput = document.getElementById('commentInput');
 
-        echo "<div style='background: #fff3e0; color: #ef6c00; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>👥 Followers Check:</h3>";
-        if (empty($followers)) {
-            echo "<p>⚠️ User ID $testUserId has no followers. Creating notifications won't have visible effect.</p>";
-            echo "<p><strong>To test properly:</strong></p>";
-            echo "<ol>";
-            echo "<li>Create a test follower relationship in the database:</li>";
-            echo "<li><code>INSERT INTO FOLLOWERS (USER_ID, FOLLOWER_ID) VALUES ($testUserId, 2);</code></li>";
-            echo "<li>Replace '2' with an existing user ID who should receive notifications</li>";
-            echo "</ol>";
-        } else {
-            echo "<p>✅ Found " . count($followers) . " followers:</p>";
-            echo "<ul>";
-            foreach ($followers as $follower) {
-                echo "<li>" . htmlspecialchars($follower['NAME']) . " (ID: " . $follower['FOLLOWER_ID'] . ")</li>";
-            }
-            echo "</ul>";
-        }
-        echo "</div>";
+if (!modal || !commentsBody) {
+    console.error('❌ Comments modal elements not found');
+    return;
+}
 
-        // Step 3: Test story notification function
-        echo "<div style='background: #f3e5f5; color: #7b1fa2; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>🚀 Testing Story Notification Function:</h3>";
-        
-        if (!empty($followers)) {
-            $result = notifyFollowersNewStory($pdo, $testStoryId, $testUserId);
-            
-            if ($result) {
-                echo "<p>✅ <strong>Success!</strong> Story notifications created successfully.</p>";
-                
-                // Check created notifications
-                $notifStmt = $pdo->prepare("
-                    SELECT n.*, u.NAME as SENDER_NAME, t.NAME as TARGET_NAME
-                    FROM NOTIFICATIONS n
-                    LEFT JOIN USERS u ON n.USER_ID = u.USER_ID
-                    LEFT JOIN USERS t ON n.TARGET_USER_ID = t.USER_ID
-                    WHERE n.USER_ID = ? AND n.NOTIFICATION_TYPE = 'new_story' AND n.RELATED_ID = ?
-                    ORDER BY n.CREATED_AT DESC
-                    LIMIT 10
-                ");
-                $notifStmt->execute([$testUserId, $testStoryId]);
-                $notifications = $notifStmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                if (!empty($notifications)) {
-                    echo "<h4>📋 Created Notifications:</h4>";
-                    echo "<table border='1' style='border-collapse: collapse; width: 100%; margin: 10px 0;'>";
-                    echo "<tr style='background: #f5f5f5;'>";
-                    echo "<th style='padding: 8px;'>ID</th>";
-                    echo "<th style='padding: 8px;'>From</th>";
-                    echo "<th style='padding: 8px;'>To</th>";
-                    echo "<th style='padding: 8px;'>Content</th>";
-                    echo "<th style='padding: 8px;'>Created</th>";
-                    echo "</tr>";
-                    
-                    foreach ($notifications as $notif) {
-                        echo "<tr>";
-                        echo "<td style='padding: 8px;'>" . $notif['NOTIFICATION_ID'] . "</td>";
-                        echo "<td style='padding: 8px;'>" . htmlspecialchars($notif['SENDER_NAME']) . "</td>";
-                        echo "<td style='padding: 8px;'>" . htmlspecialchars($notif['TARGET_NAME']) . "</td>";
-                        echo "<td style='padding: 8px;'>" . htmlspecialchars($notif['CONTENT']) . "</td>";
-                        echo "<td style='padding: 8px;'>" . $notif['CREATED_AT'] . "</td>";
-                        echo "</tr>";
-                    }
-                    echo "</table>";
-                } else {
-                    echo "<p>⚠️ Function returned success but no notifications found in database.</p>";
-                }
-                
-            } else {
-                echo "<p>❌ <strong>Failed!</strong> Story notification function returned false.</p>";
-            }
-        } else {
-            echo "<p>⏭️ <strong>Skipped:</strong> No followers to notify.</p>";
-        }
-        echo "</div>";
+// Show modal immediately
+modal.style.display = 'block';
+document.body.style.overflow = 'hidden';
 
-        // Step 4: Check notification system integration
-        echo "<div style='background: #e3f2fd; color: #1565c0; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>🔍 System Integration Check:</h3>";
-        
-        // Check if notification_utils.php is properly included
-        if (function_exists('notifyFollowersNewStory')) {
-            echo "<p>✅ <strong>notifyFollowersNewStory</strong> function is available</p>";
-        } else {
-            echo "<p>❌ <strong>notifyFollowersNewStory</strong> function is NOT available</p>";
-        }
-        
-        // Check if other notification functions exist
-        $functions = ['createNotification', 'getUserFollowers', 'getUserName'];
-        foreach ($functions as $func) {
-            if (function_exists($func)) {
-                echo "<p>✅ <strong>$func</strong> function is available</p>";
-            } else {
-                echo "<p>❌ <strong>$func</strong> function is NOT available</p>";
-            }
-        }
-        echo "</div>";
+// Clear previous content and show loading
+commentsBody.innerHTML = `
+    <div style="text-align: center; padding: 40px; color: #666;">
+        <div class="loading-spinner" style="margin: 0 auto 15px;"></div>
+        <p>Loading comments...</p>
+    </div>
+`;
 
-        // Step 5: Manual test links
-        echo "<div style='background: #fff8e1; color: #f57f17; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>🔗 Manual Test Links:</h3>";
-        echo "<p>After running this test, check these pages to verify notifications appear:</p>";
-        echo "<ul>";
-        
-        if (!empty($followers)) {
-            foreach ($followers as $follower) {
-                echo "<li><a href='header.php?user=" . $follower['FOLLOWER_ID'] . "' target='_blank'>Check " . htmlspecialchars($follower['NAME']) . "'s header notifications</a></li>";
-                echo "<li><a href='notifications.php?user=" . $follower['FOLLOWER_ID'] . "' target='_blank'>Check " . htmlspecialchars($follower['NAME']) . "'s notifications page</a></li>";
-            }
-        }
-        
-        echo "<li><a href='notifications.php' target='_blank'>View Notifications Page</a></li>";
-        echo "<li><a href='dashboard.php' target='_blank'>View Dashboard (check header)</a></li>";
-        echo "</ul>";
-        echo "</div>";
+// Reset comment input
+if (commentInput) {
+    commentInput.value = '';
+    commentInput.style.height = 'auto';
+}
 
-        // Clean up option
-        echo "<div style='background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>🧹 Clean Up Test Data:</h3>";
-        echo "<p>If you want to remove the test notifications created by this script:</p>";
-        echo "<form method='post' style='margin: 10px 0;'>";
-        echo "<input type='hidden' name='cleanup' value='1'>";
-        echo "<input type='hidden' name='test_user_id' value='$testUserId'>";
-        echo "<input type='hidden' name='test_story_id' value='$testStoryId'>";
-        echo "<button type='submit' style='background: #f44336; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;'>🗑️ Delete Test Notifications</button>";
-        echo "</form>";
-        echo "</div>";
+updateCommentSubmitButton();
 
-    } catch (Exception $e) {
-        echo "<div style='background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-        echo "<h3>❌ Error During Testing:</h3>";
-        echo "<p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>";
-        echo "<p><strong>File:</strong> " . $e->getFile() . "</p>";
-        echo "<p><strong>Line:</strong> " . $e->getLine() . "</p>";
-        echo "</div>";
+// Load initial comments
+loadComments(postId, true);
+
+// Focus on comment input after a short delay
+setTimeout(() => {
+    if (commentInput) {
+        commentInput.focus();
     }
+}, 500);
+};
 
-    // Handle cleanup
-    if (isset($_POST['cleanup']) && $_POST['cleanup'] == '1') {
-        try {
-            $cleanupUserId = intval($_POST['test_user_id']);
-            $cleanupStoryId = intval($_POST['test_story_id']);
-            
-            $cleanupStmt = $pdo->prepare("
-                DELETE FROM NOTIFICATIONS 
-                WHERE USER_ID = ? AND NOTIFICATION_TYPE = 'new_story' AND RELATED_ID = ?
-            ");
-            $cleanupStmt->execute([$cleanupUserId, $cleanupStoryId]);
-            $deletedCount = $cleanupStmt->rowCount();
-            
-            echo "<div style='background: #e8f5e8; color: #2e7d32; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-            echo "<h3>✅ Cleanup Complete:</h3>";
-            echo "<p>Deleted $deletedCount test notifications.</p>";
-            echo "</div>";
-            
-        } catch (Exception $e) {
-            echo "<div style='background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; margin: 10px 0;'>";
-            echo "<h3>❌ Cleanup Error:</h3>";
-            echo "<p>" . htmlspecialchars($e->getMessage()) . "</p>";
-            echo "</div>";
+// Function to close comments modal
+function closeCommentsModal() {
+console.log('🔒 Closing comments modal');
+
+const modal = document.getElementById('commentsModal');
+if (modal) {
+    modal.style.display = 'none';
+}
+
+document.body.style.overflow = 'auto';
+currentPostId = null;
+currentOffset = 0;
+hasMoreComments = false;
+
+// Close any open reaction panels
+closeAllCommentReactionPanels();
+}
+
+// Enhanced function to loaLooking at your dashboard.php and profile_settings.php files, I'll generate the complete JavaScript code for the profile posts with the same reactions, comments, edit/delete functionality. Here's the comprehensive JavaScript for profile_settings.php:
+
+<artifacts> <invoke name="artifacts"> <parameter name="command">create</parameter> <parameter name="type">application/vnd.ant.code</parameter> <parameter name="language">javascript</parameter> <parameter name="title">Profile Settings Complete JavaScript</parameter> <parameter name="id">profile_js_complete</parameter> <parameter name="content">// ======================================== // COMPLETE PROFILE SETTINGS JAVASCRIPT // Enhanced Reactions, Comments, Edit/Delete Posts // ========================================
+// Global variables let currentPostId = null; let commentsLoading = false; let currentOffset = 0; let hasMoreComments = false; let totalCommentsCount = 0; const commentsPerLoad = 10; const currentUserId = <?php echo json_encode($_SESSION['user_id']); ?>;
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+console.log('🚀 Initializing Profile Settings JavaScript...');
+
+initializeProfileSystems();
+initializeBannerUpload();
+initializeCommentsSystem();
+initializePostInteractions();
+initializeModals();
+
+console.log('✅ Profile Settings JavaScript Loaded Successfully!');
+});
+
+// ========================================
+// BANNER UPLOAD SYSTEM
+// ========================================
+function initializeBannerUpload() {
+const bannerUploadInput = document.getElementById('banner-upload');
+
+if (bannerUploadInput) {
+    bannerUploadInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast('Please select a valid image file (JPG, PNG, GIF, or WEBP)', 'error');
+            return;
         }
-    }
 
+        // Validate file size (5MB max)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image must be smaller than 5MB', 'error');
+            return;
+        }
+
+        uploadBanner(file);
+    });
+}
+}
+
+function uploadBanner(file) {
+const formData = new FormData();
+formData.append('action', 'upload_banner');
+formData.append('banner_image', file);
+
+showToast('Uploading banner...', 'success');
+
+fetch('profile_settings.php', {
+    method: 'POST',
+    body: formData
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        showToast('Banner updated successfully!', 'success');
+        // Update banner image
+        const bannerImg = document.querySelector('.banner-image');
+        if (bannerImg && data.banner_url) {
+            bannerImg.src = data.banner_url;
+        }
+    } else {
+        showToast(data.message || 'Failed to update banner', 'error');
+    }
+})
+.catch(error => {
+    console.error('Banner upload error:', error);
+    showToast('Error uploading banner', 'error');
+});
+}
+
+// ========================================
+// FOLLOW/UNFOLLOW SYSTEM
+// ========================================
+function toggleFollow(userId) {
+const followBtn = document.getElementById('follow-btn');
+if (!followBtn) return;
+
+const isFollowing = followBtn.textContent.trim() === 'Following';
+const action = isFollowing ? 'unfollow' : 'follow';
+
+const formData = new FormData();
+formData.append('action', action);
+formData.append('user_id', userId);
+
+// Show loading state
+followBtn.disabled = true;
+followBtn.textContent = isFollowing ? 'Unfollowing...' : 'Following...';
+
+fetch('profile_settings.php', {
+    method: 'POST',
+    body: formData
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        followBtn.textContent = data.action === 'followed' ? 'Following' : 'Follow';
+        followBtn.className = data.action === 'followed' ? 'btn btn-secondary' : 'btn btn-primary';
+        
+        // Update follower count
+        const followerCount = document.querySelector('.stat-item .stat-number');
+        if (followerCount && data.new_follower_count !== undefined) {
+            followerCount.textContent = new Intl.NumberFormat().format(data.new_follower_count);
+        }
+        
+        showToast(data.message, 'success');
+    } else {
+        showToast(data.message || 'Action failed', 'error');
+    }
+})
+.catch(error => {
+    console.error('Follow/unfollow error:', error);
+    showToast('Network error occurred', 'error');
+})
+.finally(() => {
+    followBtn.disabled = false;
+});
+}
+
+// ========================================
+// POST REACTIONS SYSTEM
+// ========================================
+function initializeProfileSystems() {
+// Initialize reaction handling
+initializeReactionHandlers();
+
+// Initialize mobile touch support
+initializeMobileReactionSupport();
+}
+
+function initializeReactionHandlers() {
+const likesContainers = document.querySelectorAll('.post-likes-container');
+
+likesContainers.forEach(container => {
+    let touchStartTime = 0;
+
+    // Handle touch start
+    container.addEventListener('touchstart', function(e) {
+        touchStartTime = Date.now();
+    });
+
+    // Handle touch end with duration check
+    container.addEventListener('touchend', function(e) {
+        const touchDuration = Date.now() - touchStartTime;
+
+        // Short tap - toggle reactions panel
+        if (touchDuration < 200) {
+            e.preventDefault();
+            toggleReactionPanel(this);
+        }
+    });
+});
+
+// Close reactions when tapping elsewhere
+document.addEventListener('touchstart', function(e) {
+    const activeContainers = document.querySelectorAll('.post-likes-container.active');
+    activeContainers.forEach(container => {
+        if (!container.contains(e.target)) {
+            container.classList.remove('active');
+        }
+    });
+});
+}
+
+function toggleReactionPanel(container) {
+const allContainers = document.querySelectorAll('.post-likes-container');
+
+// Close all other panels
+allContainers.forEach(c => {
+    if (c !== container) {
+        c.classList.remove('active');
+    }
+});
+
+// Toggle current panel
+container.classList.toggle('active');
+}
+
+// Enhanced reaction handling function function handleReaction(postId, reactionType) { console.log(🎭 Handling reaction: ${reactionType} for post: ${postId});
+
+// Add loading state to the clicked reaction
+const clickedReactionIcon = document.querySelector(`[data-post-id="${postId}"] [data-reaction="${reactionType}"]`);
+if (clickedReactionIcon) {
+    clickedReactionIcon.style.opacity = '0.6';
+    clickedReactionIcon.style.pointerEvents = 'none';
+}
+
+const formData = new FormData();
+formData.append('action', 'add_reaction');
+formData.append('post_id', postId);
+formData.append('reaction_type', reactionType);
+
+fetch('post_reaction.php', {
+    method: 'POST',
+    body: formData
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        // Update the UI with new reaction data
+        updateReactionUI(postId, data.reaction_data, reactionType, data.action_type);
+
+        // Hide the reaction panel
+        const container = document.querySelector(`[data-post-id="${postId}"].post-likes-container`);
+        if (container) {
+            container.classList.remove('active');
+        }
+
+        // Show appropriate message
+        let message = '';
+        switch (data.action_type) {
+            case 'added':
+                message = `You reacted with ${reactionType}! ✨`;
+                break;
+            case 'updated':
+                message = `Changed reaction to ${reactionType}! 🔄`;
+                break;
+            case 'removed':
+                message = `Reaction removed! 👋`;
+                break;
+            default:
+                message = 'Reaction updated!';
+        }
+        showToast(message, 'success');
+    } else {
+        showToast(data.message || 'Error adding reaction', 'error');
+    }
+})
+.catch(error => {
+    console.error('Error handling reaction:', error);
+    showToast('An error occurred while adding the reaction.', 'error');
+})
+.finally(() => {
+    // Remove loading state
+    if (clickedReactionIcon) {
+        clickedReactionIcon.style.opacity = '1';
+        clickedReactionIcon.style.pointerEvents = 'auto';
+    }
+});
+}
+
+// Enhanced UI update function function updateReactionUI(postId, reactionData, newReaction, actionType) { const container = document.querySelector([data-post-id="${postId}"].post-likes-container); if (!container) return;
+
+const likeButton = container.querySelector('.post-likes');
+const likeCount = container.querySelector('.like-count');
+const likeIcon = container.querySelector('.like-icon');
+
+// Update like button state based on user reaction
+if (reactionData.user_reaction) {
+    likeButton.classList.add('active');
+    likeButton.setAttribute('data-user-reaction', reactionData.user_reaction);
+    if (likeIcon) {
+        likeIcon.setAttribute('fill', 'var(--primary-color)');
+        likeIcon.setAttribute('stroke', 'var(--primary-color)');
+    }
 } else {
-    echo "<h2>⚠️ Security Notice</h2>";
-    echo "<p>This test script only runs on localhost/development environments for security reasons.</p>";
-    echo "<p>Current host: " . htmlspecialchars($_SERVER['HTTP_HOST']) . "</p>";
-}
-?>
-
-<style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 20px;
-    background: #f5f5f5;
+    likeButton.classList.remove('active');
+    likeButton.setAttribute('data-user-reaction', '');
+    if (likeIcon) {
+        likeIcon.setAttribute('fill', 'none');
+        likeIcon.setAttribute('stroke', 'currentColor');
+    }
 }
 
-h2, h3 {
-    color: #333;
+// Update reaction count with animation
+const totalReactions = reactionData.total_reactions;
+if (likeCount) {
+    // Add a subtle animation to the count change
+    likeCount.style.transform = 'scale(1.1)';
+    likeCount.style.transition = 'transform 0.2s ease';
+
+    setTimeout(() => {
+        if (totalReactions > 0) {
+            likeCount.textContent = totalReactions + (totalReactions === 1 ? ' reaction' : ' reactions');
+        } else {
+            likeCount.textContent = '0 reactions';
+        }
+
+        // Reset animation
+        likeCount.style.transform = 'scale(1)';
+    }, 100);
 }
 
-code {
-    background: #f5f5f5;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
+// Add animation to the clicked reaction icon
+const clickedReactionIcon = container.querySelector(`[data-reaction="${newReaction}"]`);
+if (clickedReactionIcon && actionType !== 'removed') {
+    clickedReactionIcon.classList.add('reaction-animation');
+
+    // Create a floating emoji effect
+    createFloatingEmoji(clickedReactionIcon, newReaction);
+
+    setTimeout(() => {
+        clickedReactionIcon.classList.remove('reaction-animation');
+    }, 400);
 }
 
-table {
-    font-size: 14px;
+// Update visual state of reaction icons
+const allReactionIcons = container.querySelectorAll('.reaction-icon');
+allReactionIcons.forEach(icon => {
+    const iconReaction = icon.getAttribute('data-reaction');
+    if (iconReaction === reactionData.user_reaction) {
+        icon.style.backgroundColor = 'rgba(237, 90, 44, 0.2)';
+        icon.style.transform = 'scale(1.1)';
+    } else {
+        icon.style.backgroundColor = '';
+        icon.style.transform = '';
+    }
+});
 }
 
-th {
-    font-weight: 600;
+// Create floating emoji animation effect
+function createFloatingEmoji(element, reactionType) {
+const emojiMap = {
+'yummy': '🍔',
+'delicious': '🍕',
+'tasty': '🍰',
+'love': '🍲',
+'amazing': '🍗'
+};
+
+const emoji = emojiMap[reactionType];
+if (!emoji) return;
+
+const floatingEmoji = document.createElement('div');
+floatingEmoji.textContent = emoji;
+floatingEmoji.style.position = 'absolute';
+floatingEmoji.style.fontSize = '20px';
+floatingEmoji.style.pointerEvents = 'none';
+floatingEmoji.style.zIndex = '9999';
+floatingEmoji.style.animation = 'floatUp 2s ease-out forwards';
+
+// Position relative to the clicked element
+const rect = element.getBoundingClientRect();
+floatingEmoji.style.left = (rect.left + rect.width / 2) + 'px';
+floatingEmoji.style.top = (rect.top + window.scrollY) + 'px';
+
+document.body.appendChild(floatingEmoji);
+
+// Remove after animation
+setTimeout(() => {
+    if (floatingEmoji.parentNode) {
+        floatingEmoji.parentNode.removeChild(floatingEmoji);
+    }
+}, 2000);
 }
 
-a {
-    color: #1976d2;
-    text-decoration: none;
+// Function to show reaction users
+function showReactionUsers(postId) {
+console.log('🎯 showReactionUsers called with postId:', postId);
+
+const formData = new FormData();
+formData.append('action', 'get_reaction_users');
+formData.append('post_id', postId);
+
+// Create and show modal
+showReactionUsersModal();
+
+const usersList = document.getElementById('postReactionUsersList');
+if (usersList) {
+    usersList.innerHTML = `
+        <div style="text-align: center; padding: 30px;">
+            <div class="loading-spinner" style="margin: 0 auto 15px;"></div>
+            <p style="color: #666;">Loading reactions...</p>
+        </div>
+    `;
 }
 
-a:hover {
-    text-decoration: underline;
+fetch('post_reaction.php', {
+    method: 'POST',
+    body: formData
+})
+.then(response => {
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+})
+.then(data => {
+    if (data.success && data.users) {
+        displayPostReactionUsers(data.users);
+    } else {
+        throw new Error(data.message || 'No reaction data found');
+    }
+})
+.catch(error => {
+    console.error('❌ Error fetching reactions:', error);
+    if (usersList) {
+        usersList.innerHTML = `
+            <div style="text-align: center; padding: 30px; color: #f44336;">
+                <p style="margin-bottom: 15px;">Failed to load reactions</p>
+                <button onclick="showReactionUsers(${postId})" 
+                        style="background: #ED5A2C; color: white; border: none; padding: 8px 16px; border-radius: 15px; cursor: pointer;">
+                    Try Again
+                </button>
+            </div>
+        `;
+    }
+});
 }
 
-button:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
+function showReactionUsersModal() { // Create modal if it doesn't exist let modal = document.getElementById('postReactionUsersModal'); if (!modal) { const modalHTML =             <div id="postReactionUsersModal" class="modal" style="display: none;">                 <div class="modal-content" style="max-width: 500px; max-height: 70vh; overflow: hidden;">                     <span class="close-modal" style="cursor: pointer;">&times;</span>                     <h2 style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee;">People who reacted</h2>                     <div id="postReactionUsersList" class="reaction-users-list" style="max-height: 400px; overflow-y: auto;">                         <!-- Post reaction users will be loaded here -->                     </div>                 </div>             </div>        ; document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    modal = document.getElementById('postReactionUsersModal');
+    const closeBtn = modal.querySelector('.close-modal');
+    
+    closeBtn.addEventListener('click', function() {
+        modal.style.display = 'none';
+    });
+    
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
 }
-</style>
+
+modal.style.display = 'block';
+}
+
+function displayPostReactionUsers(users) {
+const usersList = document.getElementById('postReactionUsersList');
+if (!usersList) return;
+
+if (!users || users.length === 0) {
+    usersList.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 15px;">😔</div>
+            <p style="font-size: 16px;">No reactions yet</p>
+            <p style="font-size: 14px; opacity: 0.8;">Be the first to react!</p>
+        </div>
+    `;
+    return;
+}
+
+let html = '';
+users.forEach((user) => {
+    const userImage = user.PROFILE_IMAGE || 'images/default-profile.png';
+    const reactionTime = formatReactionTime(user.CREATED_AT);
+    const reactionType = user.REACTION_TYPE?.charAt(0).toUpperCase() + user.REACTION_TYPE?.slice(1) || 'Like';
+    const reactionEmoji = user.REACTION_EMOJI || '👍';
+
+    html += `
+        <div class="reaction-user-item" style="display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; transition: all 0.2s ease; cursor: pointer;">
+            <img src="${userImage}" 
+                 alt="${user.NAME || 'User'}" 
+                 class="reaction-user-avatar" 
+                 style="width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; object-fit: cover; border: 2px solid #f0f0f0; transition: all 0.2s ease;"
+                 onerror="this.src='images/default-profile.png'">
+            <div class="reaction-user-info" style="flex: 1;">
+                <div class="reaction-user-name" style="font-weight: 600; margin-bottom: 5px; color: #333; font-size: 16px;">
+                    ${user.NAME || 'Unknown User'}
+                </div>
+                <div class="reaction-user-time" style="font-size: 13px; color: #666;">
+                    Reacted ${reactionTime}
+                </div>
+            </div>
+            <div class="reaction-user-emoji" style="font-size: 28px; margin-left: 15px; display: flex; flex-direction: column; align-items: center;">
+                <span style="margin-bottom: 2px;">${reactionEmoji}</span>
+                <small style="font-size: 11px; color: #888; text-transform: capitalize; font-weight: 500;">
+                    ${reactionType}
+                </small>
+            </div>
+        </div>
+    `;
+});
+
+usersList.innerHTML = html;
+
+// Add hover effects
+usersList.querySelectorAll('.reaction-user-item').forEach(item => {
+    item.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = '#f8f9fa';
+    });
+    item.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = 'transparent';
+    });
+});
+}
+
+function initializeMobileReactionSupport() {
+// Enhanced mobile touch support for reactions
+const likesContainers = document.querySelectorAll('.post-likes-container');
+
+likesContainers.forEach(container => {
+    let touchStartTime = 0;
+    let longPressTimer;
+
+    container.addEventListener('touchstart', function(e) {
+        touchStartTime = Date.now();
+        
+        longPressTimer = setTimeout(() => {
+            // Long press detected - directly like with default reaction
+            const postId = this.getAttribute('data-post-id');
+            if (postId) {
+                handleReaction(postId, 'yummy');
+                this.classList.remove('active');
+
+                // Provide haptic feedback if available
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                }
+            }
+        }, 500);
+    });
+
+    container.addEventListener('touchend', function(e) {
+        const touchDuration = Date.now() - touchStartTime;
+        clearTimeout(longPressTimer);
+
+        // Short tap - toggle reactions panel
+        if (touchDuration < 200) {
+            e.preventDefault();
+            toggleReactionPanel(this);
+        }
+    });
+
+    container.addEventListener('touchmove', function() {
+        clearTimeout(longPressTimer);
+    });
+});
+}
+
+// ========================================
+// COMMENTS SYSTEM
+// ========================================
+function initializeCommentsSystem() {
+console.log('🚀 Initializing Enhanced Comments System...');
+
+// Initialize modal elements
+const commentsModal = document.getElementById('commentsModal');
+const closeButton = document.querySelector('.close-comments');
+const commentInput = document.getElementById('commentInput');
+const commentSubmit = document.getElementById('commentSubmit');
+
+// Create comments modal if it doesn't exist
+if (!commentsModal) {
+    createCommentsModal();
+}
+
+// Close button event listener
+if (closeButton) {
+    closeButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeCommentsModal();
+    });
+}
+
+// Modal backdrop click to close
+if (commentsModal) {
+    commentsModal.addEventListener('click', function(e) {
+        if (e.target === commentsModal) {
+            closeCommentsModal();
+        }
+    });
+
+    // Prevent modal content clicks from closing modal
+    const modalContent = commentsModal.querySelector('.comments-modal-content');
+    if (modalContent) {
+        modalContent.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    }
+}
+
+// Comment input event listeners
+if (commentInput) {
+    // Auto-resize textarea
+    commentInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        updateCommentSubmitButton();
+    });
+
+    // Enter key to submit (Shift+Enter for new line)
+    commentInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (this.value.trim() && !commentSubmit.disabled) {
+                addComment();
+            }
+        }
+    });
+
+    // Focus and blur events
+    commentInput.addEventListener('focus', function() {
+        this.parentElement.style.borderColor = 'var(--primary-color)';
+    });
+
+    commentInput.addEventListener('blur', function() {
+        this.parentElement.style.borderColor = '#e0e0e0';
+    });
+}
+
+// Comment submit button event listener
+if (commentSubmit) {
+    commentSubmit.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!this.disabled && commentInput && commentInput.value.trim()) {
+            addComment();
+        }
+    });
+}
+
+// Initialize keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Escape key to close modal
+    if (e.key === 'Escape' && commentsModal && commentsModal.style.display === 'block') {
+        closeCommentsModal();
+    }
+});
+
+console.log('✅ Comments System Initialized Successfully!');
+}
+
+function createCommentsModal() { const modalHTML = ` <div id="commentsModal" class="comments-modal"> <div class="comments-modal-content"> <div class="comments-header"> <h3>Comments</h3> <button class="close-comments" type="button">×</button> </div>
+
+            <div class="comments-body" id="commentsBody">
+                <!-- Comments will be loaded here dynamically -->
+            </div>
+
+            <div class="comment-form">
+                <div class="comment-input-container">
+                    <img src="${getProfileImage()}" alt="Your avatar" class="comment-avatar">
+                    <textarea
+                        id="commentInput"
+                        class="comment-input"
+                        placeholder="Write a comment..."
+                        rows="1"
+                        maxlength="500"></textarea>
+                    <button
+                        id="commentSubmit"
+                        class="comment-submit"
+                        type="button"
+                        disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function getProfileImage() { // Get current user's profile imageLooking at your profile_settings.php and comparing it with the dashboard.php functionality, I'll generate the complete JavaScript code that provides the same post interactions (reactions, comments, edit/delete) for the profile page.
+

@@ -30,33 +30,33 @@ if (isset($_POST['delete_recipe'])) {
         $ownerCheck = $pdo->prepare("SELECT USER_ID, PHOTO_URL FROM RECIPES WHERE RECIPES_ID = ?");
         $ownerCheck->execute([$recipeId]);
         $recipeOwner = $ownerCheck->fetch(PDO::FETCH_ASSOC);
-
+        
         if ($recipeOwner && $recipeOwner['USER_ID'] == $userId) {
             $pdo->beginTransaction();
-
+            
             // Delete recipe ingredients relationships
             $deleteIngredientRelations = $pdo->prepare("DELETE FROM RECIPE_INGREDIENTS WHERE RECIPES_ID = ?");
             $deleteIngredientRelations->execute([$recipeId]);
-
+            
             // Delete difficulty relationships
             $deleteDifficultyRelations = $pdo->prepare("DELETE FROM DIFFICULTY_RECIPES WHERE RECIPES_ID = ?");
             $deleteDifficultyRelations->execute([$recipeId]);
-
+            
             // Delete from collections
             $deleteCollections = $pdo->prepare("DELETE FROM COLLECT WHERE RECIPES_ID = ?");
             $deleteCollections->execute([$recipeId]);
-
+            
             // Delete the recipe photo if it exists
             if (!empty($recipeOwner['PHOTO_URL']) && file_exists($recipeOwner['PHOTO_URL'])) {
                 unlink($recipeOwner['PHOTO_URL']);
             }
-
+            
             // Delete the recipe itself
             $deleteRecipe = $pdo->prepare("DELETE FROM RECIPES WHERE RECIPES_ID = ? AND USER_ID = ?");
             $deleteRecipe->execute([$recipeId, $userId]);
-
+            
             $pdo->commit();
-
+            
             // Redirect to recipes page with success message
             header("Location: recipes.php?deleted=1");
             exit();
@@ -76,22 +76,22 @@ if (isset($_POST['edit_recipe'])) {
         $ownerCheck = $pdo->prepare("SELECT USER_ID FROM RECIPES WHERE RECIPES_ID = ?");
         $ownerCheck->execute([$recipeId]);
         $recipeOwner = $ownerCheck->fetch(PDO::FETCH_ASSOC);
-
+        
         if ($recipeOwner && $recipeOwner['USER_ID'] == $userId) {
             $pdo->beginTransaction();
-
+            
             // Handle photo upload if new photo is provided
             $photoUrl = $_POST['existing_photo_url'];
             if (isset($_FILES['edit_recipe_photo']) && $_FILES['edit_recipe_photo']['error'] === UPLOAD_ERR_OK) {
                 $uploadDir = 'uploads/recipes/';
-
+                
                 if (!file_exists($uploadDir)) {
                     mkdir($uploadDir, 0777, true);
                 }
-
+                
                 $fileName = uniqid() . '_' . basename($_FILES['edit_recipe_photo']['name']);
                 $uploadFile = $uploadDir . $fileName;
-
+                
                 if (move_uploaded_file($_FILES['edit_recipe_photo']['tmp_name'], $uploadFile)) {
                     // Delete old photo if it exists
                     if (!empty($photoUrl) && file_exists($photoUrl)) {
@@ -100,7 +100,7 @@ if (isset($_POST['edit_recipe'])) {
                     $photoUrl = $uploadFile;
                 }
             }
-
+            
             // Update recipe basic information
             $updateRecipe = $pdo->prepare("
                 UPDATE RECIPES 
@@ -119,18 +119,18 @@ if (isset($_POST['edit_recipe'])) {
                 $recipeId,
                 $userId
             ]);
-
+            
             // Update difficulty
             $deleteDifficulty = $pdo->prepare("DELETE FROM DIFFICULTY_RECIPES WHERE RECIPES_ID = ?");
             $deleteDifficulty->execute([$recipeId]);
-
+            
             if ($_POST['edit_difficulty'] !== 'all') {
                 $insertDifficulty = $pdo->prepare("INSERT INTO DIFFICULTY_RECIPES (DIFFICULTY_ID, RECIPES_ID) VALUES (?, ?)");
                 $insertDifficulty->execute([$_POST['edit_difficulty'], $recipeId]);
             }
-
+            
             $pdo->commit();
-
+            
             // Redirect to avoid form resubmission
             header("Location: view-recipe.php?id=$recipeId&updated=1");
             exit();
@@ -196,7 +196,7 @@ if (isset($_POST['toggle_collect'])) {
             $success = $addStmt->execute([$userId, $recipeId]);
             $isCollected = true;
         }
-
+        
         if ($success) {
             // Redirect to avoid form resubmission
             header("Location: view-recipe.php?id=$recipeId");
@@ -297,7 +297,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, rgba(0, 0, 0, 0) 100%);
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%);
             padding: 30px;
             color: white;
         }
@@ -431,7 +431,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
             transform: translate(-50%, -50%);
         }
 
-        .ingredient-checkbox:checked+.ingredient-text {
+        .ingredient-checkbox:checked + .ingredient-text {
             text-decoration: line-through;
             color: var(--light-text);
         }
@@ -543,8 +543,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         /* Success/Error Messages */
-        .success-message,
-        .error-message {
+        .success-message, .error-message {
             padding: 15px;
             margin-bottom: 20px;
             border-radius: 8px;
@@ -699,7 +698,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 margin: 1cm;
                 size: portrait;
             }
-
+            
             body {
                 margin: 0;
                 padding: 0;
@@ -708,7 +707,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 width: 100%;
                 display: block;
             }
-
+            
             .main-content {
                 margin: 0 !important;
                 padding: 0 !important;
@@ -716,15 +715,15 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 margin-left: 0 !important;
                 display: block !important;
             }
-
-            body>nav,
-            body>.sidebar,
-            body>#sidebar,
+            
+            body > nav,
+            body > .sidebar,
+            body > #sidebar,
             nav.sidebar,
             .sidebar,
             #sidebar,
-            header,
-            .back-to-recipes,
+            header, 
+            .back-to-recipes, 
             .recipe-actions {
                 display: none !important;
                 width: 0 !important;
@@ -735,13 +734,13 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 opacity: 0 !important;
                 clip: rect(0, 0, 0, 0) !important;
             }
-
+            
             .recipe-content {
                 display: block !important;
                 width: 100% !important;
                 grid-template-columns: 1fr !important;
             }
-
+            
             .recipe-sidebar {
                 display: block !important;
                 width: 100% !important;
@@ -754,7 +753,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 page-break-after: auto;
                 page-break-inside: avoid;
             }
-
+            
             .recipe-container {
                 box-shadow: none !important;
                 width: 100% !important;
@@ -764,7 +763,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 border: none !important;
                 display: block !important;
             }
-
+            
             .recipe-instructions {
                 width: 100% !important;
                 padding: 0 !important;
@@ -774,7 +773,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 page-break-after: auto;
                 page-break-inside: avoid;
             }
-
+            
             .recipe-ingredients-list {
                 display: block !important;
                 width: 100% !important;
@@ -782,21 +781,21 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 margin-bottom: 20px !important;
                 page-break-inside: avoid;
             }
-
+            
             .recipe-ingredients-list li {
                 display: block !important;
                 width: 100% !important;
                 margin-bottom: 5px !important;
             }
-
+            
             .ingredient-checkbox {
                 display: none !important;
             }
-
+            
             .ingredient-text {
                 display: inline !important;
             }
-
+            
             .recipe-section-title {
                 border-bottom: 1px solid #ccc;
                 padding-bottom: 5px;
@@ -805,7 +804,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 page-break-after: avoid;
                 display: block !important;
             }
-
+            
             .recipe-details {
                 display: flex !important;
                 flex-wrap: wrap !important;
@@ -814,7 +813,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 padding: 10px;
                 page-break-inside: avoid;
             }
-
+            
             .recipe-detail-item {
                 margin-right: 20px !important;
                 box-shadow: none !important;
@@ -822,28 +821,26 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 flex: 1 !important;
                 min-width: 80px !important;
             }
-
+            
             .detail-value {
                 display: block !important;
                 font-weight: bold !important;
             }
-
+            
             .detail-label {
                 display: block !important;
             }
-
-            h1,
-            h2,
-            h3 {
+            
+            h1, h2, h3 {
                 page-break-after: avoid;
             }
-
+            
             .recipe-instructions-text {
                 page-break-inside: avoid;
                 display: block !important;
                 width: 100% !important;
             }
-
+            
             .recipe-header {
                 height: auto !important;
                 max-height: 300px !important;
@@ -853,7 +850,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 margin-bottom: 20px !important;
                 page-break-inside: avoid;
             }
-
+            
             .recipe-header-image {
                 display: block !important;
                 width: 100% !important;
@@ -862,7 +859,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 object-fit: contain !important;
                 page-break-inside: avoid;
             }
-
+            
             .recipe-header-overlay {
                 position: relative !important;
                 background: none !important;
@@ -870,35 +867,35 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 color: black !important;
                 display: block !important;
             }
-
+            
             .recipe-title {
                 color: black !important;
                 font-size: 24pt !important;
                 margin-top: 10px !important;
                 display: block !important;
             }
-
+            
             .recipe-meta {
                 display: block !important;
                 margin-bottom: 10px !important;
             }
-
+            
             .recipe-meta-item {
                 display: inline-block !important;
                 margin-right: 15px !important;
             }
-
+            
             .recipe-author {
                 display: block !important;
                 margin-top: 10px !important;
             }
-
+            
             img {
                 max-width: 100% !important;
                 page-break-inside: avoid;
                 display: block !important;
             }
-
+            
             .recipe-container::after {
                 content: "Printed from Feedora - " attr(data-recipe-id);
                 display: block;
@@ -907,7 +904,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 color: #999;
                 margin-top: 30px;
             }
-
+            
             @page {
                 @bottom-right {
                     content: "Page " counter(page) " of " counter(pages);
@@ -943,7 +940,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
 
         <a href="recipes.php" class="back-to-recipes">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back to Recipes
         </a>
@@ -955,10 +952,10 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php else: ?>
                     <img src="images/default-recipe.jpg" alt="Default Recipe Image" class="recipe-header-image">
                 <?php endif; ?>
-
+                
                 <div class="recipe-header-overlay">
                     <h1 class="recipe-title"><?php echo htmlspecialchars($recipe['TITLE']); ?></h1>
-
+                    
                     <div class="recipe-meta">
                         <span class="recipe-meta-item">
                             <span class="recipe-meta-icon">
@@ -974,7 +971,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                             </span>
                             <?php echo htmlspecialchars($recipe['NAME_CATEGORIE'] ?? 'Uncategorized'); ?>
                         </span>
-
+                        
                         <span class="recipe-meta-item">
                             <span class="recipe-meta-icon">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -984,7 +981,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                             <?php echo htmlspecialchars($recipe['DIFFICULTY_NAME'] ?? 'Not specified'); ?>
                         </span>
                     </div>
-
+                    
                     <div class="recipe-author">
                         <?php if (!empty($recipe['AUTHOR_IMAGE'])): ?>
                             <img src="<?php echo htmlspecialchars($recipe['AUTHOR_IMAGE']); ?>" alt="<?php echo htmlspecialchars($recipe['AUTHOR_NAME']); ?>" class="recipe-author-image">
@@ -995,7 +992,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                 </div>
             </div>
-
+            
             <div class="recipe-content">
                 <div class="recipe-instructions">
                     <h2 class="recipe-section-title">Instructions</h2>
@@ -1003,25 +1000,25 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                         <?php echo nl2br(htmlspecialchars($recipe['INSTRUCTIONS'])); ?>
                     </div>
                 </div>
-
+                
                 <div class="recipe-sidebar">
                     <div class="recipe-details">
                         <div class="recipe-detail-item">
                             <div class="detail-value"><?php echo htmlspecialchars($recipe['PREP_TIME_MINUTES'] ?? '0'); ?></div>
                             <div class="detail-label">Prep Time (min)</div>
                         </div>
-
+                        
                         <div class="recipe-detail-item">
                             <div class="detail-value"><?php echo htmlspecialchars($recipe['COOK_TIME_MINUTES'] ?? '0'); ?></div>
                             <div class="detail-label">Cook Time (min)</div>
                         </div>
-
+                        
                         <div class="recipe-detail-item">
                             <div class="detail-value"><?php echo htmlspecialchars($recipe['SERVINGS'] ?? '1'); ?></div>
                             <div class="detail-label">Servings</div>
                         </div>
                     </div>
-
+                    
                     <h2 class="recipe-section-title">Ingredients</h2>
                     <?php if (count($ingredients) > 0): ?>
                         <ul class="recipe-ingredients-list">
@@ -1029,14 +1026,14 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                                 <li class="recipe-ingredient-item">
                                     <input type="checkbox" class="ingredient-checkbox" id="ingredient-<?php echo $ingredient['INGREDIENTS_ID']; ?>">
                                     <label class="ingredient-text" for="ingredient-<?php echo $ingredient['INGREDIENTS_ID']; ?>">
-                                        <?php
-                                        $quantity = !empty($ingredient['QUANTITY']) ? $ingredient['QUANTITY'] : '';
-                                        $unit = !empty($ingredient['UNIT_NAME']) ? $ingredient['UNIT_NAME'] : '';
-                                        if (!empty($quantity) && !empty($unit)) {
-                                            echo htmlspecialchars("$quantity $unit of {$ingredient['NAME']}");
-                                        } else {
-                                            echo htmlspecialchars($ingredient['NAME']);
-                                        }
+                                        <?php 
+                                            $quantity = !empty($ingredient['QUANTITY']) ? $ingredient['QUANTITY'] : '';
+                                            $unit = !empty($ingredient['UNIT_NAME']) ? $ingredient['UNIT_NAME'] : '';
+                                            if (!empty($quantity) && !empty($unit)) {
+                                                echo htmlspecialchars("$quantity $unit of {$ingredient['NAME']}");
+                                            } else {
+                                                echo htmlspecialchars($ingredient['NAME']);
+                                            }
                                         ?>
                                     </label>
                                 </li>
@@ -1045,10 +1042,11 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                     <?php else: ?>
                         <p>No ingredients listed for this recipe.</p>
                     <?php endif; ?>
-
+                    
                     <div class="recipe-actions">
                         <?php if (!$isOwner): ?>
                             <!-- Save Recipe Button for Non-Owners -->
+                             
                             <form method="post" action="">
                                 <input type="hidden" name="recipe_id" value="<?php echo $recipeId; ?>">
                                 <button type="submit" name="toggle_collect" class="recipe-action-btn save-recipe-btn" id="saveBtn">
@@ -1067,7 +1065,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                                 </svg>
                                 Edit Recipe
                             </button>
-
+                            
                             <button class="recipe-action-btn delete-recipe-btn" onclick="confirmDelete()">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="3 6 5 6 21 6"></polyline>
@@ -1076,7 +1074,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                                 Delete Recipe
                             </button>
                         <?php endif; ?>
-
+                        
                         <!-- Print Button for Everyone -->
                         <button class="recipe-action-btn print-recipe-btn" onclick="window.print()">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1086,16 +1084,6 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                             </svg>
                             Print Recipe
                         </button>
-
-                        <form method="post" action="">
-                            <input type="hidden" name="recipe_id" value="<?php echo $recipeId; ?>">
-                            <button type="submit" name="toggle_collect" class="recipe-action-btn save-recipe-btn" id="saveBtn">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="<?php echo $isCollected ? 'white' : 'none'; ?>" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                                </svg>
-                                <?php echo $isCollected ? 'Saved to Collection' : 'Save to Collection'; ?>
-                            </button>
-                        </form>
                     </div>
                 </div>
             </div>
@@ -1103,92 +1091,92 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
     </main>
 
     <?php if ($isOwner): ?>
-        <!-- Edit Recipe Modal -->
-        <div id="editRecipeModal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal" onclick="closeEditModal()">&times;</span>
-                <h2>Edit Recipe</h2>
-
-                <form method="post" action="" enctype="multipart/form-data">
-                    <input type="hidden" name="existing_photo_url" value="<?php echo htmlspecialchars($recipe['PHOTO_URL'] ?? ''); ?>">
-
-                    <div class="form-group">
-                        <label for="edit_title">Recipe Title</label>
-                        <input type="text" id="edit_title" name="edit_title" value="<?php echo htmlspecialchars($recipe['TITLE']); ?>" required>
+    <!-- Edit Recipe Modal -->
+    <div id="editRecipeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Recipe</h2>
+            
+            <form method="post" action="" enctype="multipart/form-data">
+                <input type="hidden" name="existing_photo_url" value="<?php echo htmlspecialchars($recipe['PHOTO_URL'] ?? ''); ?>">
+                
+                <div class="form-group">
+                    <label for="edit_title">Recipe Title</label>
+                    <input type="text" id="edit_title" name="edit_title" value="<?php echo htmlspecialchars($recipe['TITLE']); ?>" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="edit_category">Category</label>
+                        <select id="edit_category" name="edit_category" required>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?php echo $category['ID_CATEGORIE']; ?>" 
+                                    <?php echo ($recipe['ID_CATEGORIE'] == $category['ID_CATEGORIE']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($category['NAME_CATEGORIE']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group half">
-                            <label for="edit_category">Category</label>
-                            <select id="edit_category" name="edit_category" required>
-                                <?php foreach ($categories as $category): ?>
-                                    <option value="<?php echo $category['ID_CATEGORIE']; ?>"
-                                        <?php echo ($recipe['ID_CATEGORIE'] == $category['ID_CATEGORIE']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($category['NAME_CATEGORIE']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                    
+                    <div class="form-group half">
+                        <label for="edit_difficulty">Difficulty</label>
+                        <select id="edit_difficulty" name="edit_difficulty">
+                            <option value="all" <?php echo empty($recipe['DIFFICULTY_NAME']) ? 'selected' : ''; ?>>All Difficulties</option>
+                            <?php foreach ($difficulties as $difficulty): ?>
+                                <option value="<?php echo $difficulty['DIFFICULTY_ID']; ?>" 
+                                    <?php echo ($recipe['DIFFICULTY_NAME'] == $difficulty['DIFFICULTY_NAME']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($difficulty['DIFFICULTY_NAME']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_recipe_photo">Recipe Photo</label>
+                    <?php if (!empty($recipe['PHOTO_URL'])): ?>
+                        <div style="margin-bottom: 10px;">
+                            <img src="<?php echo htmlspecialchars($recipe['PHOTO_URL']); ?>" alt="Current photo" style="max-width: 200px; height: auto; border-radius: 8px;">
+                            <p style="font-size: 12px; color: #666; margin-top: 5px;">Current photo (leave empty to keep current)</p>
                         </div>
-
-                        <div class="form-group half">
-                            <label for="edit_difficulty">Difficulty</label>
-                            <select id="edit_difficulty" name="edit_difficulty">
-                                <option value="all" <?php echo empty($recipe['DIFFICULTY_NAME']) ? 'selected' : ''; ?>>All Difficulties</option>
-                                <?php foreach ($difficulties as $difficulty): ?>
-                                    <option value="<?php echo $difficulty['DIFFICULTY_ID']; ?>"
-                                        <?php echo ($recipe['DIFFICULTY_NAME'] == $difficulty['DIFFICULTY_NAME']) ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($difficulty['DIFFICULTY_NAME']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+                    <?php endif; ?>
+                    <input type="file" id="edit_recipe_photo" name="edit_recipe_photo" accept="image/*">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit_instructions">Instructions</label>
+                    <textarea id="edit_instructions" name="edit_instructions" rows="6" required><?php echo htmlspecialchars($recipe['INSTRUCTIONS']); ?></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group third">
+                        <label for="edit_prep_time">Prep Time (minutes)</label>
+                        <input type="number" id="edit_prep_time" name="edit_prep_time" min="0" value="<?php echo htmlspecialchars($recipe['PREP_TIME_MINUTES'] ?? '0'); ?>" required>
                     </div>
-
-                    <div class="form-group">
-                        <label for="edit_recipe_photo">Recipe Photo</label>
-                        <?php if (!empty($recipe['PHOTO_URL'])): ?>
-                            <div style="margin-bottom: 10px;">
-                                <img src="<?php echo htmlspecialchars($recipe['PHOTO_URL']); ?>" alt="Current photo" style="max-width: 200px; height: auto; border-radius: 8px;">
-                                <p style="font-size: 12px; color: #666; margin-top: 5px;">Current photo (leave empty to keep current)</p>
-                            </div>
-                        <?php endif; ?>
-                        <input type="file" id="edit_recipe_photo" name="edit_recipe_photo" accept="image/*">
+                    
+                    <div class="form-group third">
+                        <label for="edit_cook_time">Cook Time (minutes)</label>
+                        <input type="number" id="edit_cook_time" name="edit_cook_time" min="0" value="<?php echo htmlspecialchars($recipe['COOK_TIME_MINUTES'] ?? '0'); ?>" required>
                     </div>
-
-                    <div class="form-group">
-                        <label for="edit_instructions">Instructions</label>
-                        <textarea id="edit_instructions" name="edit_instructions" rows="6" required><?php echo htmlspecialchars($recipe['INSTRUCTIONS']); ?></textarea>
+                    
+                    <div class="form-group third">
+                        <label for="edit_servings">Servings</label>
+                        <input type="number" id="edit_servings" name="edit_servings" min="1" value="<?php echo htmlspecialchars($recipe['SERVINGS'] ?? '1'); ?>" required>
                     </div>
-
-                    <div class="form-row">
-                        <div class="form-group third">
-                            <label for="edit_prep_time">Prep Time (minutes)</label>
-                            <input type="number" id="edit_prep_time" name="edit_prep_time" min="0" value="<?php echo htmlspecialchars($recipe['PREP_TIME_MINUTES'] ?? '0'); ?>" required>
-                        </div>
-
-                        <div class="form-group third">
-                            <label for="edit_cook_time">Cook Time (minutes)</label>
-                            <input type="number" id="edit_cook_time" name="edit_cook_time" min="0" value="<?php echo htmlspecialchars($recipe['COOK_TIME_MINUTES'] ?? '0'); ?>" required>
-                        </div>
-
-                        <div class="form-group third">
-                            <label for="edit_servings">Servings</label>
-                            <input type="number" id="edit_servings" name="edit_servings" min="1" value="<?php echo htmlspecialchars($recipe['SERVINGS'] ?? '1'); ?>" required>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" onclick="closeEditModal()" class="btn-secondary">Cancel</button>
-                        <button type="submit" name="edit_recipe" class="btn-primary">Update Recipe</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" onclick="closeEditModal()" class="btn-secondary">Cancel</button>
+                    <button type="submit" name="edit_recipe" class="btn-primary">Update Recipe</button>
+                </div>
+            </form>
         </div>
+    </div>
 
-        <!-- Delete Confirmation Form -->
-        <form id="deleteForm" method="post" action="" style="display: none;">
-            <input type="hidden" name="delete_recipe" value="1">
-        </form>
+    <!-- Delete Confirmation Form -->
+    <form id="deleteForm" method="post" action="" style="display: none;">
+        <input type="hidden" name="delete_recipe" value="1">
+    </form>
     <?php endif; ?>
 
     <script>
@@ -1196,7 +1184,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
             // Save ingredient checked state to localStorage
             const checkboxes = document.querySelectorAll('.ingredient-checkbox');
             const recipeId = '<?php echo $recipeId; ?>';
-
+            
             // Load saved state
             checkboxes.forEach(checkbox => {
                 const id = checkbox.id;
@@ -1204,7 +1192,7 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
                 if (savedState === 'true') {
                     checkbox.checked = true;
                 }
-
+                
                 // Save state on change
                 checkbox.addEventListener('change', function() {
                     localStorage.setItem(`recipe_${recipeId}_${id}`, this.checked);
@@ -1213,38 +1201,38 @@ $difficulties = $difficultiesStmt->fetchAll(PDO::FETCH_ASSOC);
         });
 
         <?php if ($isOwner): ?>
-            // Edit modal functions
-            function openEditModal() {
-                document.getElementById('editRecipeModal').style.display = 'block';
-                document.body.style.overflow = 'hidden';
+        // Edit modal functions
+        function openEditModal() {
+            document.getElementById('editRecipeModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editRecipeModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Delete confirmation
+        function confirmDelete() {
+            if (confirm('Are you sure you want to delete this recipe? This action cannot be undone and will remove the recipe from all collections.')) {
+                document.getElementById('deleteForm').submit();
             }
+        }
 
-            function closeEditModal() {
-                document.getElementById('editRecipeModal').style.display = 'none';
-                document.body.style.overflow = 'auto';
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('editRecipeModal');
+            if (event.target === modal) {
+                closeEditModal();
             }
+        });
 
-            // Delete confirmation
-            function confirmDelete() {
-                if (confirm('Are you sure you want to delete this recipe? This action cannot be undone and will remove the recipe from all collections.')) {
-                    document.getElementById('deleteForm').submit();
-                }
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeEditModal();
             }
-
-            // Close modal when clicking outside
-            window.addEventListener('click', function(event) {
-                const modal = document.getElementById('editRecipeModal');
-                if (event.target === modal) {
-                    closeEditModal();
-                }
-            });
-
-            // Close modal with Escape key
-            document.addEventListener('keydown', function(event) {
-                if (event.key === 'Escape') {
-                    closeEditModal();
-                }
-            });
+        });
         <?php endif; ?>
     </script>
 </body>

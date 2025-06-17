@@ -60,54 +60,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 
     // Handle banner image upload
-    if ($_POST['action'] === 'upload_banner' && $profileUserId === $currentUserId) {
-        try {
-            if (!isset($_FILES['banner_image']) || $_FILES['banner_image']['error'] !== UPLOAD_ERR_OK) {
-                throw new Exception('File upload failed.');
-            }
-
-            $file = $_FILES['banner_image'];
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/ogg'];
-            $fileType = strtolower($file['type']);
-
-            if (!in_array($fileType, $allowedTypes)) {
-                throw new Exception('Invalid file type. Please upload JPG, PNG, GIF, WEBP images, or MP4, WEBM, OGG videos only.');
-            }
-
-            if ($file['size'] > 5 * 1024 * 1024) {
-                throw new Exception('File size too large. Maximum size is 5MB.');
-            }
-
-            $uploadDir = 'uploads/banners/';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-
-            $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $fileName = 'banner_' . $currentUserId . '_' . uniqid() . '.' . $fileExtension;
-            $uploadPath = $uploadDir . $fileName;
-
-            if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
-                throw new Exception('Failed to save uploaded file.');
-            }
-
-            $updateStmt = $pdo->prepare("UPDATE USERS SET BANNER_IMAGE = ? WHERE USER_ID = ?");
-            if (!$updateStmt->execute([$uploadPath, $currentUserId])) {
-                unlink($uploadPath);
-                throw new Exception('Failed to update database.');
-            }
-
-            $response['success'] = true;
-            $response['message'] = 'Banner updated successfully!';
-            $response['banner_url'] = $uploadPath;
-        } catch (Exception $e) {
-            $response['message'] = $e->getMessage();
+   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload_banner' && $profileUserId === $currentUserId) {
+    header('Content-Type: application/json');
+    $response = ['success' => false, 'message' => ''];
+    
+    try {
+        // Check if file was uploaded
+        if (!isset($_FILES['banner_image']) || $_FILES['banner_image']['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception('File upload failed. Please try again.');
         }
 
-        header('Content-Type: application/json');
-        echo json_encode($response);
-        exit();
+        $file = $_FILES['banner_image'];
+        
+        // Validate file type
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        $fileType = strtolower($file['type']);
+        $mimeType = mime_content_type($file['tmp_name']); // Additional security check
+
+        if (!in_array($fileType, $allowedTypes) && !in_array($mimeType, $allowedTypes)) {
+            throw new Exception('Invalid file type. Please upload JPG, PNG, GIF, or WEBP images only.');
+        }
+
+        // Validate file size (max 5MB)
+        if ($file['size'] > 5 * 1024 * 1024) {
+            throw new Exception('File size too large. Maximum size is 5MB.');
+        }
+
+        // Create upload directory if it doesn't exist
+        $uploadDir = 'uploads/banners/';
+        if (!is_dir($uploadDir)) {
+            if (!mkdir($uploadDir, 0755, true)) {
+                throw new Exception('Failed to create upload directory.');
+            }
+        }
+
+        // Generate unique filename
+        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $fileName = 'banner_' . $currentUserId . '_' . uniqid() . '.' . $fileExtension;
+        $uploadPath = $uploadDir . $fileName;
+
+        // Move uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $uploadPath)) {
+            throw new Exception('Failed to save uploaded file.');
+        }
+
+        // Get current banner image path to delete old one
+        $currentBannerStmt = $pdo->prepare("SELECT BANNER_IMAGE FROM USERS WHERE USER_ID = ?");
+        $currentBannerStmt->execute([$currentUserId]);
+        $currentBanner = $currentBannerStmt->fetchColumn();
+
+        // Update database with new banner path
+        $updateStmt = $pdo->prepare("UPDATE USERS SET BANNER_IMAGE = ? WHERE USER_ID = ?");
+        if (!$updateStmt->execute([$uploadPath, $currentUserId])) {
+            // If database update fails, remove the uploaded file
+            unlink($uploadPath);
+            throw new Exception('Failed to update database.');
+        }
+
+        // Delete old banner image if it exists and is not the default
+        if ($currentBanner && $currentBanner !== 'images/default-banner.jpg' && file_exists($currentBanner)) {
+            unlink($currentBanner);
+        }
+
+        $response['success'] = true;
+        $response['message'] = 'Banner updated successfully!';
+        $response['banner_url'] = $uploadPath;
+        
+    } catch (Exception $e) {
+        $response['message'] = $e->getMessage();
+        error_log("Banner upload error for user {$currentUserId}: " . $e->getMessage());
     }
+
+    echo json_encode($response);
+    exit();
+}
 
     // Handle post editing (only for post owner)
     if ($_POST['action'] === 'edit_post' && isset($_POST['edit_post_id'])) {
@@ -3394,7 +3420,116 @@ $profileUser['PROFILE_IMAGE'] = getProfileImage($profileUser['PROFILE_IMAGE']);
                 });
             });
         });
+document.addEventListener('DOMContentLoaded', function() {
+    // Banner upload functionality
+    const bannerUpload = document.getElementById('banner-upload');
+    
+    if (bannerUpload) {
+        bannerUpload.addEventListener('change', function() {
+            const file = this.files[0];
+            if (!file) return;
 
+            // Validate file type on client side
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            const fileType = file.type.toLowerCase();
+            
+            if (!allowedTypes.includes(fileType)) {
+                showToast('Please select a valid image file (JPG, PNG, GIF, or WEBP)', 'error');
+                this.value = '';
+                return;
+            }
+
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('File size too large. Maximum size is 5MB.', 'error');
+                this.value = '';
+                return;
+            }
+
+            // Show loading state
+            const uploadBtn = document.querySelector('.banner-upload-btn');
+            if (uploadBtn) {
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path></svg> Uploading...';
+            }
+
+            // Create FormData for upload
+            const formData = new FormData();
+            formData.append('action', 'upload_banner');
+            formData.append('banner_image', file);
+
+            // Upload the file
+            fetch('profile_settings.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the banner image
+                    const bannerImg = document.querySelector('.banner-image');
+                    if (bannerImg) {
+                        bannerImg.src = data.banner_url + '?t=' + new Date().getTime(); // Add timestamp to prevent cache
+                    }
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message || 'Failed to upload banner', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                showToast('An error occurred while uploading the banner', 'error');
+            })
+            .finally(() => {
+                // Reset upload button
+                if (uploadBtn) {
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg> Change Banner';
+                }
+                // Clear the file input
+                bannerUpload.value = '';
+            });
+        });
+    }
+});
+
+// Toast notification function (if not already defined)
+function showToast(message, type = 'success') {
+    // Remove existing toasts
+    document.querySelectorAll('.toast').forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#4CAF50' : '#f44336'};
+        color: white;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInUp 0.3s ease, slideOutDown 0.3s ease 2.7s forwards;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 300px;
+    `;
+    
+    const icon = type === 'success' ? '✅' : '❌';
+    toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 3000);
+}
         // REPLACE the comments JavaScript in your dashboard.php with this optimized version:
 
         // ========================================
